@@ -4,6 +4,11 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useRequireAuth } from '@/lib/useRequireAuth'
 import { useTenantRole } from '@/lib/useTenantRole'
 import { hasMinRole } from '@/lib/roles'
+import { StatCard } from '@/components/ui/stat-card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Users, Calendar, TrendingUp, Plus, Settings, UserPlus } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 type Slot = { id: string; title: string; start_at: string; end_at: string; capacity: number; trainer_id: string | null }
 type Booking = { id: string; time_slot_id: string; status: 'BOOKED'|'CANCELLED'|'NO_SHOW' }
@@ -61,7 +66,7 @@ export default function TenantDashboard({ params }: { params: Promise<{ slug: st
       setUpcomingSlots((slots.data ?? []) as Slot[])
       setTrainers((tr.data ?? []) as Trainer[])
 
-      // 3) upcoming slot booking’leri çek (status=BOOKED ağırlık)
+      // 3) upcoming slot booking'leri çek (status=BOOKED ağırlık)
       const upIds = (slots.data ?? []).map((s: any) => s.id)
       if (upIds.length) {
         const b = await supabase.from('bookings')
@@ -100,62 +105,108 @@ export default function TenantDashboard({ params }: { params: Promise<{ slug: st
 
   return (
     <main className="p-6 space-y-8">
-      <h1 className="text-xl font-semibold">Salon Özeti</h1>
-
-      {/* Kartlar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <a href={`/t/${slug}/members`} className="rounded border p-4 hover:bg-gray-50">
-          <div className="text-2xl font-bold">{membersCount}</div>
-          <div className="text-gray-600">Üye</div>
-        </a>
-        <a href={`/t/${slug}/schedule`} className="rounded border p-4 hover:bg-gray-50">
-          <div className="text-2xl font-bold">{upcomingSlots.length}</div>
-          <div className="text-gray-600">Yaklaşan Slot (7 gün)</div>
-        </a>
-        <a href={`/t/${slug}/schedule`} className="rounded border p-4 hover:bg-gray-50">
-          <div className="text-2xl font-bold">{slotsBookedTotal}</div>
-          <div className="text-gray-600">Yaklaşan Slotlarda Rezervasyon</div>
-        </a>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+          Salon Özeti
+        </h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <a href={`/t/${slug}/members/new`}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Yeni Üye
+            </a>
+          </Button>
+          {canManage && (
+            <>
+              <Button variant="outline" size="sm" asChild>
+                <a href={`/t/${slug}/schedule/new`}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Yeni Slot
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href={`/t/${slug}/settings/invite`}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Davet Et
+                </a>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Hızlı aksiyonlar */}
-      <div className="flex flex-wrap gap-2">
-        <a href={`/t/${slug}/members/new`} className="px-3 py-2 rounded border">Yeni Üye</a>
-        {canManage && (
-          <>
-            <a href={`/t/${slug}/schedule/new`} className="px-3 py-2 rounded border">Yeni Slot</a>
-            <a href={`/t/${slug}/settings/invite`} className="px-3 py-2 rounded border">Davet Et</a>
-          </>
-        )}
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          title="Toplam Üye"
+          value={membersCount}
+          description="Aktif salon üyeleri"
+          icon={Users}
+          variant="success"
+        />
+        <StatCard
+          title="Yaklaşan Slot"
+          value={upcomingSlots.length}
+          description="Önümüzdeki 7 gün"
+          icon={Calendar}
+          variant="default"
+        />
+        <StatCard
+          title="Toplam Rezervasyon"
+          value={slotsBookedTotal}
+          description="Yaklaşan slotlarda"
+          icon={TrendingUp}
+          variant="warning"
+        />
       </div>
 
       {/* Yaklaşan slotlar listesi */}
-      <section className="space-y-2">
-        <h2 className="font-medium">Yaklaşan Slotlar (7 gün)</h2>
-        <ul className="divide-y">
-          {upcomingSlots.map(s => {
-            const booked = bookedMap.get(s.id) ?? 0
-            return (
-              <li key={s.id} className="py-3 flex items-center justify-between gap-3">
-                <div>
-                  <div className="font-medium">{s.title}</div>
-                  <div className="text-sm text-gray-600">
-                    {new Date(s.start_at).toLocaleString()} – {new Date(s.end_at).toLocaleTimeString()}
-                    {' · '}Eğitmen: {trainerName(s.trainer_id)}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Yaklaşan Slotlar (7 gün)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {upcomingSlots.map(s => {
+              const booked = bookedMap.get(s.id) ?? 0
+              const isFull = booked >= s.capacity
+              return (
+                <div key={s.id} className="flex items-center justify-between p-4 rounded-lg border bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">{s.title}</div>
+                    <div className="text-sm text-gray-600">
+                      {new Date(s.start_at).toLocaleString()} – {new Date(s.end_at).toLocaleTimeString()}
+                      {' · '}Eğitmen: {trainerName(s.trainer_id)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      "text-sm px-3 py-1 rounded-full font-medium",
+                      isFull 
+                        ? "bg-red-100 text-red-800 border border-red-200" 
+                        : "bg-green-100 text-green-800 border border-green-200"
+                    )}>
+                      {booked}/{s.capacity}
+                    </span>
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={`/t/${slug}/schedule/${s.id}`}>Detay</a>
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm px-2 py-0.5 rounded border">
-                    {booked}/{s.capacity}
-                  </span>
-                  <a className="text-blue-600" href={`/t/${slug}/schedule/${s.id}`}>Detay</a>
-                </div>
-              </li>
-            )
-          })}
-          {upcomingSlots.length === 0 && <li className="py-3 text-gray-500">Önümüzdeki 7 günde slot yok.</li>}
-        </ul>
-      </section>
+              )
+            })}
+            {upcomingSlots.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                <p>Önümüzdeki 7 günde slot yok.</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </main>
   )
 }
