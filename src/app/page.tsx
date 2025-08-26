@@ -1,50 +1,59 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useRequireAuth } from '@/lib/useRequireAuth'
+
+type Row = { id: string; name: string; slug: string }
 
 export default function Home() {
-  const [session, setSession] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  useRequireAuth()
   const supabase = createSupabaseBrowserClient()
+  const [rows, setRows] = useState<Row[] | null>(null)
+  const [err, setErr] = useState<string|null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null)
-      setLoading(false)
-    })
+    ;(async () => {
+      const { data: { user }, error: uerr } = await supabase.auth.getUser()
+      if (uerr || !user) { setErr(uerr?.message || 'Kullanıcı bulunamadı'); return }
+
+      const { data, error } = await supabase
+        .from('user_tenants')
+        .select('tenant_id, tenants:tenant_id(id,name,slug)')
+        .eq('user_id', user.id)
+
+      if (error) { setErr(error.message); return }
+      const list = (data ?? []).map((r:any) => r.tenants).filter(Boolean) as Row[]
+
+      // 0/1/çok kuralı
+      if (list.length === 0) {
+        location.href = '/t/create'
+        return
+      }
+      if (list.length === 1) {
+        location.href = `/t/${list[0].slug}`
+        return
+      }
+      setRows(list)
+    })()
   }, [])
 
-  const logout = async () => {
-    await supabase.auth.signOut()
-    location.reload()
-  }
+  if (err) return <main className="p-6 text-red-600">{err}</main>
+  if (!rows) return <main className="p-6">Yükleniyor…</main>
 
   return (
-    <main className="min-h-screen p-6 space-y-6">
-      <h1 className="text-2xl font-semibold">Fitsyy • Dashboard</h1>
-
-      {loading ? (
-        <p>Yükleniyor…</p>
-      ) : session ? (
-        <>
-          <div className="flex items-center gap-3">
-            <span className="px-2 py-1 rounded bg-green-100 border">Giriş: {session.user.email}</span>
-            <button onClick={logout} className="text-sm underline">Çıkış</button>
-          </div>
-
-          <div className="space-y-2">
-            <a className="inline-block px-3 py-2 rounded bg-black text-white" href="/t/demo/members">Üyeler</a>
-            <a className="inline-block px-3 py-2 rounded bg-black text-white ml-2" href="/t/demo/schedule">Takvim</a>
-          </div>
-        </>
-      ) : (
-        <>
-          <p>Giriş yapmadın.</p>
-          <a className="inline-block px-3 py-2 rounded bg-black text-white" href="/login">Giriş (Magic Link)</a>
-          {/* Eğer şifreli giriş sayfası eklediysen: */}
-          {/* <a className="inline-block px-3 py-2 rounded bg-black text-white ml-2" href="/login-password">E-posta & Şifre ile Giriş</a> */}
-        </>
-      )}
+    <main className="p-6 space-y-6">
+      <h1 className="text-xl font-semibold">Salonlarını Seç</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {rows.map(t => (
+          <a key={t.id} href={`/t/${t.slug}`} className="rounded border p-4 hover:bg-gray-50">
+            <div className="text-lg font-medium">{t.name}</div>
+            <div className="text-sm text-gray-600">/{t.slug}</div>
+          </a>
+        ))}
+      </div>
+      <div>
+        <a href="/t/create" className="mt-4 inline-block px-3 py-2 rounded border">Yeni Salon Oluştur</a>
+      </div>
     </main>
   )
 }

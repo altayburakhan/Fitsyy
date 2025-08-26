@@ -2,10 +2,12 @@
 import { use, useEffect, useMemo, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useRequireAuth } from '@/lib/useRequireAuth'
+import RoleGate from '@/components/RoleGate'
 
 type Member = { id: string; full_name: string; email?: string|null; phone?: string|null }
 type Booking = { id: string; member_id: string; status: 'BOOKED'|'CANCELLED'|'NO_SHOW' }
-type Slot = { id:string; title:string; start_at:string; end_at:string; capacity:number }
+type Slot = { id:string; title:string; start_at:string; end_at:string; capacity:number; trainer_id: string|null } // 🆕
+type Trainer = { id: string; full_name: string } // 🆕
 
 export default function SlotDetail({ params }: { params: Promise<{ slug: string; slotId: string }> }) {
   useRequireAuth()
@@ -16,6 +18,9 @@ export default function SlotDetail({ params }: { params: Promise<{ slug: string;
   const [slot, setSlot] = useState<Slot | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [trainers, setTrainers] = useState<Trainer[]>([])            // 🆕
+  const [updatingTrainer, setUpdatingTrainer] = useState(false)      // 🆕
+
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -35,15 +40,17 @@ export default function SlotDetail({ params }: { params: Promise<{ slug: string;
     if (t.error || !t.data) { setErr(t.error?.message || 'Tenant yok'); setLoading(false); return }
     setTenantId(t.data.id)
 
-    const [s, m, b] = await Promise.all([
-      supabase.from('time_slots').select('id,title,start_at,end_at,capacity').eq('id', slotId).single(),
+    const [s, m, b, tr] = await Promise.all([
+      supabase.from('time_slots').select('id,title,start_at,end_at,capacity,trainer_id').eq('id', slotId).single(), // 🆕 trainer_id
       supabase.from('members').select('id, full_name, email, phone').eq('tenant_id', t.data.id).order('full_name'),
       supabase.from('bookings').select('id, member_id, status').eq('time_slot_id', slotId),
+      supabase.from('trainers').select('id, full_name').eq('tenant_id', t.data.id).eq('active', true).order('full_name'), // 🆕
     ])
 
     if (s.error) setErr(s.error.message); else setSlot(s.data as Slot)
     if (m.error) setErr(m.error.message); else setMembers((m.data || []) as Member[])
     if (b.error) setErr(b.error.message); else setBookings((b.data || []) as Booking[])
+    if (!tr.error) setTrainers((tr.data || []) as Trainer[]) // 🆕
     setLoading(false)
   }
 
@@ -85,6 +92,15 @@ export default function SlotDetail({ params }: { params: Promise<{ slug: string;
     if (error) alert(error.message); else load()
   }
 
+  // 🆕 Eğitmen ata/güncelle
+  const setTrainer = async (trainerId: string | null) => {
+    if (!slot) return
+    setUpdatingTrainer(true)
+    const { error } = await supabase.from('time_slots').update({ trainer_id: trainerId }).eq('id', slot.id)
+    setUpdatingTrainer(false)
+    if (error) alert(error.message); else load()
+  }
+
   // ➕ Hızlı üye oluştur + otomatik rezervasyon
   const quickCreateAndBook = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -111,7 +127,7 @@ export default function SlotDetail({ params }: { params: Promise<{ slug: string;
 
   return (
     <main className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold">{slot.title}</h1>
         <span className="text-sm text-gray-600">
           {new Date(slot.start_at).toLocaleString()} – {new Date(slot.end_at).toLocaleTimeString()}
@@ -119,6 +135,21 @@ export default function SlotDetail({ params }: { params: Promise<{ slug: string;
         <span className="text-sm px-2 py-0.5 rounded border">
           Kapasite {bookedCount}/{slot.capacity} {isFull && '• DOLU'}
         </span>
+
+        <RoleGate slug={slug} min="MANAGER">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Eğitmen:</span>
+            <select
+              className="border rounded p-1 text-sm"
+              value={slot.trainer_id ?? ''}
+              onChange={e => setTrainer(e.target.value || null)}
+              disabled={updatingTrainer}
+            >
+              <option value="">(Seçilmedi)</option>
+              {trainers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+            </select>
+          </div>
+        </RoleGate>
       </div>
 
       <section className="space-y-2">

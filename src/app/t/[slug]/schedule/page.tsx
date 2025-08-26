@@ -2,73 +2,89 @@
 import { use, useEffect, useMemo, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useRequireAuth } from '@/lib/useRequireAuth'
+import RoleGate from '@/components/RoleGate'
 
-type Slot = { id:string; title:string; type:'CLASS'|'PT'; start_at:string; end_at:string; capacity:number }
-type Booking = { id:string; time_slot_id:string; member_id:string; status:'BOOKED'|'CANCELLED'|'NO_SHOW' }
+type Slot = { id:string; title:string; type:'CLASS'|'PT'; start_at:string; end_at:string; capacity:number; trainer_id: string | null }
+type Booking = { id:string; time_slot_id:string; status:'BOOKED'|'CANCELLED'|'NO_SHOW' }
+type Trainer = { id:string; full_name:string }
 
 export default function SchedulePage({ params }: { params: Promise<{ slug: string }> }) {
   useRequireAuth()
   const { slug } = use(params)
+  const supabase = createSupabaseBrowserClient()
 
   const [slots, setSlots] = useState<Slot[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [trainers, setTrainers] = useState<Trainer[]>([])
+  const [trainerFilter, setTrainerFilter] = useState<string>('') // 🆕
   const [err, setErr] = useState<string | null>(null)
 
-  // filtre state
-  const [from, setFrom] = useState<string>('')   // "YYYY-MM-DD"
-  const [to, setTo]     = useState<string>('')   // "YYYY-MM-DD"
+  // tarih filtreleri (senin önceki sürümün varsa koru; yoksa boş geçiyoruz)
+  const [from, setFrom] = useState(''); const [to, setTo] = useState('')
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient()
     ;(async () => {
-      const { data: tenant, error: terr } =
-        await supabase.from('tenants').select('id').eq('slug', slug).single()
+      const { data: tenant, error: terr } = await supabase.from('tenants').select('id').eq('slug', slug).single()
       if (terr || !tenant) return setErr(terr?.message || 'Tenant yok')
 
-      const [s, b] = await Promise.all([
+      const [s, b, tr] = await Promise.all([
         supabase.from('time_slots')
-          .select('id,title,type,start_at,end_at,capacity')
-          .eq('tenant_id', tenant.id)
-          .order('start_at'),
+          .select('id,title,type,start_at,end_at,capacity,trainer_id')
+          .eq('tenant_id', tenant.id).order('start_at'),
         supabase.from('bookings')
-          .select('id,time_slot_id,member_id,status')
+          .select('id,time_slot_id,status')
           .eq('tenant_id', tenant.id),
+        supabase.from('trainers')
+          .select('id,full_name')
+          .eq('tenant_id', tenant.id)
+          .eq('active', true)
+          .order('full_name'),
       ])
       if (s.error) return setErr(s.error.message)
       if (b.error) return setErr(b.error.message)
+      if (tr.error) return setErr(tr.error.message)
 
       setSlots(s.data ?? [])
-      setBookings(b.data as Booking[] ?? [])
+      setBookings(b.data ?? [])
+      setTrainers(tr.data ?? [])
     })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
-  // tarih aralığına göre filtrelenmiş slotlar
-  const filteredSlots = useMemo(() => {
-    if (!from && !to) return slots
-    const fromTs = from ? new Date(from + 'T00:00:00').getTime() : -Infinity
-    const toTs   = to   ? new Date(to   + 'T23:59:59').getTime() : +Infinity
-    return slots.filter(s => {
-      const ts = new Date(s.start_at).getTime()
-      return ts >= fromTs && ts <= toTs
-    })
-  }, [slots, from, to])
+  const trainerName = (id: string | null) =>
+    id ? (trainers.find(t => t.id === id)?.full_name ?? '') : ''
+
+  const inDateRange = (iso: string) => {
+    const ts = new Date(iso).getTime()
+    const fromTs = from ? new Date(from+'T00:00:00').getTime() : -Infinity
+    const toTs   = to   ? new Date(to  +'T23:59:59').getTime() : +Infinity
+    return ts >= fromTs && ts <= toTs
+  }
+
+  const visibleSlots = useMemo(() => {
+    return slots.filter(s =>
+      (!from && !to || inDateRange(s.start_at)) &&
+      (!trainerFilter || s.trainer_id === trainerFilter)
+    )
+  }, [slots, from, to, trainerFilter])
 
   const countBy = (slotId: string, status: Booking['status']) =>
     bookings.filter(b => b.time_slot_id === slotId && b.status === status).length
-  const booked    = (slotId: string) => countBy(slotId, 'BOOKED')
+  const booked = (slotId: string) => countBy(slotId, 'BOOKED')
   const cancelled = (slotId: string) => countBy(slotId, 'CANCELLED')
-  const noShow    = (slotId: string) => countBy(slotId, 'NO_SHOW')
+  const noShow = (slotId: string) => countBy(slotId, 'NO_SHOW')
 
   if (err) return <main className="p-6 text-red-600">Hata: {err}</main>
 
   return (
     <main className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Takvim</h1>
-        <a className="px-3 py-2 rounded bg-black text-white inline-block" href={`/t/${slug}/schedule/new`}>Yeni Slot</a>
+        <RoleGate slug={slug} min="MANAGER">
+          <a className="px-3 py-2 rounded bg-black text-white" href={`/t/${slug}/schedule/new`}>Yeni Slot</a>
+        </RoleGate>
       </div>
-
-      {/* Tarih filtresi */}
+      {/* Filtreler */}
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className="block text-sm text-gray-600">Başlangıç</label>
@@ -78,30 +94,18 @@ export default function SchedulePage({ params }: { params: Promise<{ slug: strin
           <label className="block text-sm text-gray-600">Bitiş</label>
           <input type="date" className="border rounded p-2" value={to} onChange={e=>setTo(e.target.value)} />
         </div>
-        <button className="border rounded px-3 py-2" onClick={()=>{ setFrom(''); setTo('') }}>Temizle</button>
-        {/* hızlı kısayollar */}
-        <button className="border rounded px-3 py-2" onClick={()=>{
-          const d = new Date(); const iso = d.toISOString().slice(0,10)
-          setFrom(iso); setTo(iso)
-        }}>Bugün</button>
-        <button className="border rounded px-3 py-2" onClick={()=>{
-          const now = new Date()
-          const start = new Date(now); start.setDate(now.getDate() - now.getDay()) // pazar
-          const end   = new Date(start); end.setDate(start.getDate() + 6)
-          setFrom(start.toISOString().slice(0,10))
-          setTo(end.toISOString().slice(0,10))
-        }}>Bu Hafta</button>
-        <button className="border rounded px-3 py-2" onClick={()=>{
-          const now = new Date()
-          const start = new Date(now.getFullYear(), now.getMonth(), 1)
-          const end   = new Date(now.getFullYear(), now.getMonth()+1, 0)
-          setFrom(start.toISOString().slice(0,10))
-          setTo(end.toISOString().slice(0,10))
-        }}>Bu Ay</button>
+        <div>
+          <label className="block text-sm text-gray-600">Eğitmen</label>
+          <select className="border rounded p-2" value={trainerFilter} onChange={e=>setTrainerFilter(e.target.value)}>
+            <option value="">(Hepsi)</option>
+            {trainers.map(t => <option key={t.id} value={t.id}>{t.full_name}</option>)}
+          </select>
+        </div>
+        <button className="border rounded px-3 py-2" onClick={()=>{ setFrom(''); setTo(''); setTrainerFilter('') }}>Temizle</button>
       </div>
 
       <ul className="divide-y">
-        {filteredSlots.map(s => {
+        {visibleSlots.map(s => {
           const b = booked(s.id)
           const capFull = b >= s.capacity
           return (
@@ -109,19 +113,19 @@ export default function SchedulePage({ params }: { params: Promise<{ slug: strin
               <div>
                 <div className="font-medium flex items-center gap-2">
                   {s.title} • {s.type}
+                  {trainerName(s.trainer_id) && <span className="text-xs px-2 py-0.5 rounded border">{trainerName(s.trainer_id)}</span>}
                   {capFull && <span className="text-xs px-2 py-0.5 rounded bg-red-100 border border-red-300">DOLU</span>}
                 </div>
                 <div className="text-sm text-gray-600">
                   {new Date(s.start_at).toLocaleString()} – {new Date(s.end_at).toLocaleTimeString()} •
-                  {' '}Kapasite {b}/{s.capacity}
-                  {' '}• İptal {cancelled(s.id)} • No-Show {noShow(s.id)}
+                  {' '}Kapasite {b}/{s.capacity} • İptal {cancelled(s.id)} • No-Show {noShow(s.id)}
                 </div>
               </div>
               <a className="text-blue-600" href={`/t/${slug}/schedule/${s.id}`}>Detay</a>
             </li>
           )
         })}
-        {filteredSlots.length === 0 && <li className="py-3 text-gray-500">Filtreye uygun slot yok.</li>}
+        {visibleSlots.length === 0 && <li className="py-3 text-gray-500">Filtreye uygun slot yok.</li>}
       </ul>
     </main>
   )
