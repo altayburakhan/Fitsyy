@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useRequireAuth } from '@/lib/useRequireAuth'
+import Link from 'next/link'
 
 type Row = { id: string; name: string; slug: string }
 
@@ -52,7 +53,7 @@ export default function Home() {
         ))}
       </div>
       <div>
-        <a href="/t/create" className="mt-4 inline-block px-3 py-2 rounded border">Yeni Salon Oluştur</a>
+        <Link href="/t/create" className="px-3 py-2 rounded border">Salon Oluştur</Link>
       </div>
     </main>
   )
