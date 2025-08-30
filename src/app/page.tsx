@@ -23,17 +23,41 @@ export default function Dashboard() {
     ;(async () => {
       setLoading(true)
       setErr(null)
+    
+      // aktif kullanıcı
+      const { data: ures, error: uerr } = await supabase.auth.getUser()
+      if (uerr || !ures?.user) {
+        setErr('Oturum bulunamadı'); setLoading(false); return
+      }
+      const userId = ures.user.id
+    
+      // kullanıcının üye olduğu salonları çek (join)
       const { data, error } = await supabase
-        .from('tenants')
-        .select('id,name,slug')
+        .from('user_tenants')
+        .select('tenant:tenants(id,name,slug)')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
+    
       if (error) setErr(error.message)
-      setTenants((data ?? []) as Tenant[])
+    
+      // map’le
+      const items = (data ?? [])
+        .map((r: any) => r.tenant)
+        .filter(Boolean)
+    
+      setTenants(items as { id:string; name:string; slug:string }[])
       setLoading(false)
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    if (!loading && !err && tenants.length === 0) {
+      // otomatik yönlendirme istersen aç:
+      // location.href = '/t/create'
+    }
+  }, [loading, err, tenants.length])
+  
   // 2) Basit istatistikler (üyeler/eğitmenler/slotlar)
   useEffect(() => {
     if (!tenants.length) return
