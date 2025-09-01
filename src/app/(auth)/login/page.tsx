@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 export default function LoginPage() {
@@ -20,6 +20,22 @@ export default function LoginPage() {
     if (error) setErr(error.message)
     else setSent(true)
   }
+  // src/app/login/page.tsx (login sonrası)
+useEffect(() => {
+  const supabase = createSupabaseBrowserClient()
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('inviteToken') : null
+      if (token) {
+        localStorage.removeItem('inviteToken')
+        location.href = `/invite/${token}`
+      } else {
+        location.href = '/'
+      }
+    }
+  })
+}, [])
+
 
   return (
     <main className="relative isolate min-h-screen overflow-hidden bg-background text-foreground">
