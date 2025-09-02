@@ -175,8 +175,14 @@ export default function MeasurementsCard({
 function Th({ children }: { children: React.ReactNode }) {
   return <th className="px-3 py-2 text-left font-medium text-gray-700">{children}</th>
 }
-function Td({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2 ${className ?? ''}`}>{children}</td>
+function Td(
+  { children, className = '', ...rest }: React.HTMLAttributes<HTMLTableCellElement>
+) {
+  return (
+    <td {...rest} className={`px-3 py-2 ${className}`}>
+      {children}
+    </td>
+  )
 }
 
 /** Basit sparkline (ekstra kütüphane yok) */
