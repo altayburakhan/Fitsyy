@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, UserPlus, Phone, Mail, Calendar, Award, X } from 'lucide-react';
+import { Search, UserPlus, Award, X, ChevronRight } from 'lucide-react';
 import { members } from '../data/mockData';
 import type { Member } from '../types';
 import { ACCENT, CARD, BORDER, ITEM, TEXT2, TEXT3 } from '../theme';
@@ -37,16 +37,12 @@ function MemberCard({ m, onSelect }: { m: Member; onSelect: (m: Member) => void 
           </div>
         </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-        {[{ Icon: Mail, t: m.email }, { Icon: Phone, t: m.phone }, { Icon: Calendar, t: `Yenileme: ${new Date(m.renewalDate).toLocaleDateString('tr-TR')}` }].map(({ Icon, t }) => (
-          <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, color: TEXT3, fontSize: 12 }}>
-            <Icon size={12} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t}</span>
-          </div>
-        ))}
-      </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ background: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30`, borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 500 }}>{planLabel[m.plan]}</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: TEXT3, fontSize: 12 }}><Award size={12} />{m.attendanceThisMonth} gün</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: TEXT3, fontSize: 12 }}><Award size={12} />{m.attendanceThisMonth} gün</span>
+          <ChevronRight size={14} style={{ color: TEXT3 }} />
+        </div>
       </div>
     </div>
   );

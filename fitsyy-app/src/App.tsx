@@ -6,6 +6,7 @@ import Members from './pages/Members';
 import CalendarPage from './pages/CalendarPage';
 import Staff from './pages/Staff';
 import Finance from './pages/Finance';
+import Activities from './pages/Activities';
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/calendar" element={<Layout><CalendarPage /></Layout>} />
         <Route path="/staff" element={<Layout><Staff /></Layout>} />
         <Route path="/finance" element={<Layout><Finance /></Layout>} />
+        <Route path="/activities" element={<Layout><Activities /></Layout>} />
       </Routes>
     </BrowserRouter>
   );

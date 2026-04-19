@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserPlus, Mail, Phone, Calendar, DollarSign, Clock, X, Star } from 'lucide-react';
+import { UserPlus, Mail, Phone, Calendar, DollarSign, Clock, X } from 'lucide-react';
 import { staff } from '../data/mockData';
 import type { Staff as StaffType } from '../types';
 import { ACCENT, CARD, BORDER, ITEM, TEXT2, TEXT3 } from '../theme';
@@ -113,19 +113,8 @@ export default function Staff() {
                   <div style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>{m.name}</div>
                   <span style={{ background: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30`, borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 500 }}>{roleLabel[m.role]}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Star size={12} color={ACCENT} fill={ACCENT} />
-                  <span style={{ color: TEXT3, fontSize: 12 }}>4.8</span>
-                </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                {[{ Icon: Mail, t: m.email }, { Icon: Phone, t: m.phone }, { Icon: DollarSign, t: `₺${m.salary.toLocaleString('tr-TR')} / ay` }].map(({ Icon, t }) => (
-                  <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, color: TEXT3, fontSize: 12 }}>
-                    <Icon size={12} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 3 }}>
+              <div style={{ display: 'flex', gap: 3, marginBottom: 4 }}>
                 {allDays.map(d => <div key={d} style={{ flex: 1, height: 5, borderRadius: 99, background: m.schedule.includes(d) ? ACCENT : BORDER }} />)}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>

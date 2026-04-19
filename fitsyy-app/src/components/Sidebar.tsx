@@ -1,16 +1,17 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Calendar, UserCheck,
-  TrendingUp, Dumbbell, Settings, LogOut, Bell,
+  TrendingUp, Dumbbell, Settings, LogOut, Bell, Activity,
 } from 'lucide-react';
 import { ACCENT, BORDER, TEXT2, TEXT3 } from '../theme';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/members', icon: Users, label: 'Üyeler' },
+  { to: '/members', icon: Users, label: 'Uyeler' },
   { to: '/calendar', icon: Calendar, label: 'Takvim' },
-  { to: '/staff', icon: UserCheck, label: 'Çalışanlar' },
+  { to: '/staff', icon: UserCheck, label: 'Calisanlar' },
   { to: '/finance', icon: TrendingUp, label: 'Finans' },
+  { to: '/activities', icon: Activity, label: 'Aktiviteler' },
 ];
 
 export default function Sidebar() {
@@ -24,7 +25,7 @@ export default function Sidebar() {
         </div>
         <div>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: 18, lineHeight: 1 }}>FitSyy</div>
-          <div style={{ color: TEXT3, fontSize: 11, marginTop: 3 }}>Spor Salonu Yönetimi</div>
+          <div style={{ color: TEXT3, fontSize: 11, marginTop: 3 }}>Spor Salonu Yonetimi</div>
         </div>
       </div>
 
@@ -66,7 +67,7 @@ export default function Sidebar() {
           </button>
         ))}
         <button style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '11px 16px', borderRadius: 12, border: 'none', background: 'transparent', color: '#ef4444', fontSize: 14, cursor: 'pointer' }}>
-          <LogOut size={18} /> Çıkış Yap
+          <LogOut size={18} /> Cikis Yap
         </button>
       </div>
 
@@ -74,8 +75,8 @@ export default function Sidebar() {
       <div style={{ borderTop: `1px solid ${BORDER}`, padding: '16px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 36, height: 36, borderRadius: 999, background: `linear-gradient(135deg, ${ACCENT}, #1ac490)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700, fontSize: 13 }}>HA</div>
         <div>
-          <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>Hakan Akın</div>
-          <div style={{ color: TEXT3, fontSize: 11 }}>Yönetici</div>
+          <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>Hakan Akin</div>
+          <div style={{ color: TEXT3, fontSize: 11 }}>Yonetici</div>
         </div>
       </div>
     </aside>
