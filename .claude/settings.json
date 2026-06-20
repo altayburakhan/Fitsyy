@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(/mnt/c/Users/Burakhan/Desktop/Projects/Fitsyy-main/fitsyy-app/.env.local)"
+    ]
+  }
+}
