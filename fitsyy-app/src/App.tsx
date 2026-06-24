@@ -9,6 +9,7 @@ import Staff from './pages/Staff';
 import Finance from './pages/Finance';
 import Activities from './pages/Activities';
 import Login from './pages/Login';
+import Onboarding from './pages/Onboarding';
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,19 +23,25 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
+  if (!profile?.gym_id) return <Navigate to="/onboarding" replace />;
   return <>{children}</>;
 }
 
 function AppRoutes() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   if (loading) return null;
 
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/onboarding" element={
+        !user ? <Navigate to="/login" replace /> :
+        profile?.gym_id ? <Navigate to="/" replace /> :
+        <Onboarding />
+      } />
       <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
       <Route path="/members" element={<ProtectedRoute><Layout><Members /></Layout></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><Layout><CalendarPage /></Layout></ProtectedRoute>} />

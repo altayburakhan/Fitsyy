@@ -1,9 +1,10 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Calendar, UserCheck,
   TrendingUp, Dumbbell, Settings, LogOut, Bell, Activity,
 } from 'lucide-react';
 import { ACCENT, BORDER, TEXT2, TEXT3 } from '../theme';
+import { useAuth } from '../contexts/AuthContext';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -15,6 +16,14 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  const { signOut, profile } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleSignOut() {
+    await signOut();
+    navigate('/login');
+  }
+
   return (
     <aside style={{ width: 256, background: '#050510', borderRight: `1px solid ${BORDER}`, position: 'fixed', top: 0, left: 0, height: '100vh', display: 'flex', flexDirection: 'column', zIndex: 50 }}>
 
@@ -66,17 +75,24 @@ export default function Sidebar() {
             {badge && <span style={{ marginLeft: 'auto', background: ACCENT, color: '#000', borderRadius: 999, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>{badge}</span>}
           </button>
         ))}
-        <button style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '11px 16px', borderRadius: 12, border: 'none', background: 'transparent', color: '#ef4444', fontSize: 14, cursor: 'pointer' }}>
-          <LogOut size={18} /> Cikis Yap
+        <button
+          onClick={handleSignOut}
+          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '11px 16px', borderRadius: 12, border: 'none', background: 'transparent', color: '#ef4444', fontSize: 14, cursor: 'pointer' }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#ef444415')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <LogOut size={18} /> Çıkış Yap
         </button>
       </div>
 
       {/* User */}
       <div style={{ borderTop: `1px solid ${BORDER}`, padding: '16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 999, background: `linear-gradient(135deg, ${ACCENT}, #1ac490)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700, fontSize: 13 }}>HA</div>
+        <div style={{ width: 36, height: 36, borderRadius: 999, background: `linear-gradient(135deg, ${ACCENT}, #1ac490)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700, fontSize: 13 }}>
+          {profile?.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+        </div>
         <div>
-          <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>Hakan Akin</div>
-          <div style={{ color: TEXT3, fontSize: 11 }}>Yonetici</div>
+          <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>{profile?.full_name ?? 'Kullanıcı'}</div>
+          <div style={{ color: TEXT3, fontSize: 11 }}>{profile?.role ?? ''}</div>
         </div>
       </div>
     </aside>

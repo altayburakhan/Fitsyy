@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, UserPlus, Award, X, ChevronRight } from 'lucide-react';
-import { members } from '../data/mockData';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import type { Member } from '../types';
 import { ACCENT, CARD, BORDER, ITEM, TEXT2, TEXT3 } from '../theme';
 
@@ -98,11 +99,135 @@ function MemberModal({ m, onClose }: { m: Member; onClose: () => void }) {
   );
 }
 
+function AddMemberModal({ gymId, onClose, onAdded }: { gymId: string; onClose: () => void; onAdded: (m: Member) => void }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', plan: 'basic' as Member['plan'], gender: 'male' as Member['gender'], age: '', renewal_date: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    const { data, error: err } = await supabase.from('members').insert({
+      gym_id: gymId,
+      name: form.name,
+      email: form.email || null,
+      phone: form.phone || null,
+      plan: form.plan,
+      status: 'active',
+      gender: form.gender,
+      age: form.age ? parseInt(form.age) : null,
+      renewal_date: form.renewal_date || null,
+    }).select('*').single();
+
+    if (err) { setError('Üye eklenemedi.'); setSaving(false); return; }
+
+    onAdded({
+      id: data.id, name: data.name, email: data.email ?? '', phone: data.phone ?? '',
+      plan: data.plan, status: data.status, joinDate: data.join_date,
+      renewalDate: data.renewal_date ?? '', age: data.age ?? 0,
+      gender: data.gender ?? 'male', attendanceThisMonth: 0,
+    });
+    onClose();
+  }
+
+  const inp: React.CSSProperties = { background: '#080810', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '11px 14px', color: '#fff', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const lbl: React.CSSProperties = { color: TEXT2, fontSize: 12, display: 'block', marginBottom: 6 };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', backdropFilter: 'blur(6px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#0c0c18', border: `1px solid ${ACCENT}40`, borderRadius: 20, width: '100%', maxWidth: 460 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: `1px solid ${BORDER}` }}>
+          <span style={{ color: '#fff', fontWeight: 600, fontSize: 16 }}>Üye Ekle</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer' }}><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSave} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={lbl}>Ad Soyad *</label>
+              <input style={inp} required value={form.name} onChange={e => set('name', e.target.value)} placeholder="Ayşe Kaya" />
+            </div>
+            <div>
+              <label style={lbl}>E-posta</label>
+              <input style={inp} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="ornek@mail.com" />
+            </div>
+            <div>
+              <label style={lbl}>Telefon</label>
+              <input style={inp} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="0532 000 0000" />
+            </div>
+            <div>
+              <label style={lbl}>Paket</label>
+              <select style={{ ...inp, cursor: 'pointer' }} value={form.plan} onChange={e => set('plan', e.target.value)}>
+                <option value="basic">Basic</option>
+                <option value="standard">Standard</option>
+                <option value="premium">Premium</option>
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Cinsiyet</label>
+              <select style={{ ...inp, cursor: 'pointer' }} value={form.gender} onChange={e => set('gender', e.target.value)}>
+                <option value="male">Erkek</option>
+                <option value="female">Kadın</option>
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Yaş</label>
+              <input style={inp} type="number" value={form.age} onChange={e => set('age', e.target.value)} placeholder="25" min="1" max="100" />
+            </div>
+            <div>
+              <label style={lbl}>Yenileme Tarihi</label>
+              <input style={inp} type="date" value={form.renewal_date} onChange={e => set('renewal_date', e.target.value)} />
+            </div>
+          </div>
+          {error && <div style={{ background: '#ff444420', border: '1px solid #ff444440', borderRadius: 10, padding: '10px 14px', color: '#ff8888', fontSize: 13 }}>{error}</div>}
+          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, background: ITEM, color: TEXT2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px 0', fontSize: 14, cursor: 'pointer' }}>İptal</button>
+            <button type="submit" disabled={saving} style={{ flex: 2, background: ACCENT, color: '#000', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, boxShadow: `0 0 16px ${ACCENT}30` }}>
+              {saving ? 'Kaydediliyor...' : 'Üye Ekle'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Members() {
+  const { profile } = useAuth();
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [fStatus, setFStatus] = useState('all');
   const [fPlan, setFPlan] = useState('all');
   const [sel, setSel] = useState<Member | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.gym_id) return;
+    supabase
+      .from('members')
+      .select('*')
+      .eq('gym_id', profile.gym_id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setMembers((data ?? []).map(r => ({
+          id: r.id,
+          name: r.name,
+          email: r.email ?? '',
+          phone: r.phone ?? '',
+          plan: r.plan,
+          status: r.status,
+          joinDate: r.join_date,
+          renewalDate: r.renewal_date ?? '',
+          age: r.age ?? 0,
+          gender: r.gender ?? 'male',
+          attendanceThisMonth: r.attendance_this_month ?? 0,
+        })));
+        setLoading(false);
+      });
+  }, [profile?.gym_id]);
 
   const filtered = members.filter(m => {
     const ms = m.name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase());
@@ -112,6 +237,12 @@ export default function Members() {
   const inputStyle: React.CSSProperties = { background: CARD, border: `1px solid ${BORDER}`, color: '#fff', borderRadius: 12, padding: '10px 16px 10px 40px', fontSize: 14, outline: 'none', width: '100%' };
   const selectStyle: React.CSSProperties = { background: CARD, border: `1px solid ${BORDER}`, color: TEXT2, borderRadius: 12, padding: '10px 16px', fontSize: 13, outline: 'none', cursor: 'pointer' };
 
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: TEXT3, fontSize: 14 }}>
+      Yükleniyor...
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -119,7 +250,7 @@ export default function Members() {
           <h2 style={{ color: '#fff', fontSize: 24, fontWeight: 700, margin: 0 }}>Üye Yönetimi</h2>
           <p style={{ color: TEXT2, fontSize: 14, marginTop: 4 }}>{members.length} toplam · {members.filter(m => m.status === 'active').length} aktif</p>
         </div>
-        <button style={{ background: ACCENT, color: '#000', border: 'none', padding: '10px 18px', borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: `0 0 24px ${ACCENT}40` }}>
+        <button onClick={() => setAddOpen(true)} style={{ background: ACCENT, color: '#000', border: 'none', padding: '10px 18px', borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: `0 0 24px ${ACCENT}40` }}>
           <UserPlus size={16} /> Üye Ekle
         </button>
       </div>
@@ -173,6 +304,13 @@ export default function Members() {
       )}
 
       {sel && <MemberModal m={sel} onClose={() => setSel(null)} />}
+      {addOpen && profile?.gym_id && (
+        <AddMemberModal
+          gymId={profile.gym_id}
+          onClose={() => setAddOpen(false)}
+          onAdded={m => setMembers(prev => [m, ...prev])}
+        />
+      )}
     </div>
   );
 }

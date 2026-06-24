@@ -11,6 +11,24 @@ FitSyy, spor salonları için **multi-tenant SaaS** yönetim uygulamasıdır. He
 
 ---
 
+## Ürün Kararları
+
+### Salon Tipleri
+
+Desteklenen üç salon tipi: `fitness`, `pilates`, `sports` (spor salonu).
+
+**Karar: Tek dashboard, gym_type'a göre widget göster/gizle.**
+- Ayrı dashboard yok — core metrikler (üye, gelir, katılım, takvim) tüm tipler için aynı
+- `gyms.type` kolonuna göre ilgili widget'lar öne çıkar veya gizlenir
+- Örnek: pilates → ders doluluk oranı ön planda; fitness → alan/ekipman; sports → kort rezervasyonu
+- Kurulum akışında kullanıcı salon tipini seçer → `gyms.type` olarak kaydedilir → dashboard buna göre ayarlanır
+
+```ts
+type GymType = 'fitness' | 'pilates' | 'sports';
+```
+
+---
+
 ## Geliştirme Ortamı
 
 - Proje dizini: `/mnt/c/Users/Burakhan/Desktop/Projects/Fitsyy-main/fitsyy-app`
